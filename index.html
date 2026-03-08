@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S3 Media Viewer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="credentials-screen">
+    <div class="credentials-form">
+      <div class="lang-toggle-wrap">
+        <button type="button" id="lang-toggle" class="lang-toggle" title="Switch to English">EN</button>
+      </div>
+      <h1 data-i18n="credTitle">S3 Media Viewer</h1>
+      <p data-i18n="credDesc">Yetkiniz olan S3 bucket'larına erişim için AWS bilgilerinizi girin.</p>
+      <form id="credentials-form">
+        <label>
+          Access Key ID
+          <input type="text" id="access-key" required placeholder="AKIA...">
+        </label>
+        <label>
+          Secret Access Key
+          <input type="password" id="secret-key" required placeholder="••••••••">
+        </label>
+        <label>
+          Region
+          <input type="text" id="region" required placeholder="eu-west-1" value="eu-west-1">
+        </label>
+        <button type="submit" data-i18n="saveLogin">Kaydet ve Giriş Yap</button>
+      </form>
+      <button type="button" id="clear-credentials" class="secondary" data-i18n="clearCreds">Kayıtlı bilgileri sil</button>
+    </div>
+  </div>
+
+  <div id="buckets-screen" class="hidden">
+    <div class="buckets-container">
+      <div class="lang-toggle-wrap">
+        <button type="button" id="lang-toggle-buckets" class="lang-toggle" title="Switch to English">EN</button>
+      </div>
+      <h1 data-i18n="selectBucket">Bucket seçin</h1>
+      <p data-i18n="selectBucketDesc"></p>
+      <div class="bucket-manual-wrap">
+        <label class="bucket-manual-label" data-i18n="enterBucketName">Bucket adı</label>
+        <div class="bucket-manual-row">
+          <input type="text" id="bucket-manual-input" data-i18n-placeholder="bucketPlaceholder" placeholder="bucket-adi" class="bucket-manual-input">
+          <button type="button" id="bucket-manual-go" class="retry-btn" data-i18n="go">Git</button>
+        </div>
+      </div>
+      <button type="button" id="buckets-logout" class="secondary" data-i18n="logout">Çıkış</button>
+    </div>
+  </div>
+
+  <div id="app-screen" class="hidden">
+    <header>
+      <div class="header-controls">
+        <span class="bucket-display"><span id="current-bucket-name"></span> <a href="#" id="change-bucket" class="change-bucket" data-i18n="changeBucket">Bucket değiştir</a></span>
+        <span id="folder-info" class="folder-info"></span>
+        <div class="header-actions">
+          <button type="button" id="lang-toggle-app" class="lang-toggle" title="Language">EN</button>
+          <button type="button" id="header-select-all" class="header-btn" data-i18n="selectAll">☑ Tümünü seç</button>
+          <button type="button" id="options-btn" class="header-btn header-options-btn" aria-haspopup="true" aria-expanded="false">⚙ Seçenekler</button>
+          <div class="header-selects-desktop">
+            <select id="grid-size" class="header-select">
+              <option value="small">Küçük</option>
+              <option value="medium" selected>Orta</option>
+              <option value="large">Büyük</option>
+            </select>
+            <select id="sort-order" class="header-select">
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+            </select>
+          </div>
+        </div>
+        <button id="logout-btn" class="secondary" data-i18n="logout">Çıkış</button>
+      </div>
+      <nav id="breadcrumb" class="breadcrumb"></nav>
+    </header>
+
+    <main id="content" tabindex="0">
+      <div id="loading" class="loading hidden" data-i18n="loading">Yükleniyor...</div>
+      <div id="error-message" class="error-message hidden"></div>
+      <div class="toolbar-actions">
+        <button type="button" id="btn-new-folder" class="toolbar-btn" data-i18n="newFolder">+ Klasör</button>
+        <button type="button" id="btn-upload" class="toolbar-btn" data-i18n="upload">↑ Yükle</button>
+      </div>
+      <input type="file" id="upload-input" multiple class="hidden">
+      <input type="file" id="upload-folder-input" webkitdirectory directory multiple class="hidden">
+      <div id="folders" class="folders"></div>
+      <div id="photos" class="photos"></div>
+    </main>
+
+    <div id="selection-bar" class="selection-bar hidden">
+      <span id="selection-count" class="selection-count">0 seçili</span>
+      <button type="button" id="selection-select-all" class="selection-bar-btn" data-i18n="selectAll">☑ Tümünü seç</button>
+      <button type="button" id="selection-download" class="selection-bar-btn selection-bar-primary" data-i18n="download">↓ İndir</button>
+      <button type="button" id="selection-copy" class="selection-bar-btn selection-bar-primary" data-i18n="copy">📋 Kopyala</button>
+      <button type="button" id="selection-clear" class="selection-bar-btn" data-i18n="clear">✕ Seçimi temizle</button>
+      <button type="button" id="selection-delete" class="selection-bar-btn selection-bar-delete" data-i18n="delete">🗑 Sil</button>
+    </div>
+
+    <div id="lightbox" class="lightbox hidden">
+      <button id="lightbox-close" class="lightbox-close" aria-label="Kapat">&times;</button>
+      <button id="lightbox-prev" class="lightbox-nav lightbox-prev" aria-label="Önceki">‹</button>
+      <button id="lightbox-next" class="lightbox-nav lightbox-next" aria-label="Sonraki">›</button>
+      <div class="lightbox-content">
+        <img id="lightbox-img" src="" alt="" class="lightbox-media">
+        <video id="lightbox-video" class="lightbox-media" controls playsinline></video>
+        <iframe id="lightbox-iframe" class="lightbox-media" title="PDF"></iframe>
+        <div class="lightbox-toolbar">
+          <button type="button" id="lightbox-select" class="lightbox-download">
+            <span class="lightbox-download-icon">☑</span>
+            <span data-i18n="addToSelection">Seçime ekle</span>
+          </button>
+          <button type="button" id="lightbox-select-all" class="lightbox-download">
+            <span class="lightbox-download-icon">☑</span>
+            <span data-i18n="selectAllPhotos">Tümünü seç</span>
+          </button>
+          <button type="button" id="lightbox-download" class="lightbox-download">
+            <span class="lightbox-download-icon">↓</span>
+            <span data-i18n="download">İndir</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="selection-rect" class="selection-rect hidden"></div>
+
+  <div id="delete-modal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-icon">🗑</div>
+      <h2 id="delete-modal-title" class="modal-title" data-i18n="deleteTitle">Fotoğrafları sil</h2>
+      <p id="delete-modal-message" class="modal-message"></p>
+      <p id="delete-modal-warning" class="modal-warning" data-i18n="deleteWarning">Bu işlem geri alınamaz.</p>
+      <div class="modal-actions">
+        <button type="button" id="delete-modal-cancel" class="modal-btn modal-btn-secondary" data-i18n="cancel">İptal</button>
+        <button type="button" id="delete-modal-confirm" class="modal-btn modal-btn-danger" data-i18n="delete">Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-folder-modal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-icon">📁</div>
+      <h2 class="modal-title" data-i18n="newFolderTitle">Yeni klasör</h2>
+      <input type="text" id="new-folder-name" class="modal-input" data-i18n-placeholder="folderNamePlaceholder" placeholder="Klasör adı">
+      <div class="modal-actions">
+        <button type="button" id="new-folder-cancel" class="modal-btn modal-btn-secondary" data-i18n="cancel">İptal</button>
+        <button type="button" id="new-folder-confirm" class="modal-btn modal-btn-primary" data-i18n="create">Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-modal" class="modal-overlay hidden">
+    <div class="modal-dialog upload-modal-dialog">
+      <div class="modal-icon">📤</div>
+      <h2 class="modal-title" data-i18n="uploadTitle">Yükle</h2>
+      <p class="modal-message" data-i18n="uploadModalDesc">Dosya veya klasör seçerek mevcut konuma yükleyin.</p>
+      <div class="upload-modal-actions">
+        <button type="button" id="upload-modal-files" class="modal-btn modal-btn-primary upload-modal-btn">
+          <span class="upload-modal-icon">📄</span>
+          <span data-i18n="selectFiles">Dosya seç</span>
+        </button>
+        <button type="button" id="upload-modal-folder" class="modal-btn modal-btn-primary upload-modal-btn">
+          <span class="upload-modal-icon">📁</span>
+          <span data-i18n="selectFolder">Klasör seç</span>
+        </button>
+      </div>
+      <button type="button" id="upload-modal-cancel" class="modal-btn modal-btn-secondary" data-i18n="cancel">İptal</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div id="options-panel" class="options-panel hidden">
+    <div class="options-panel-content">
+      <div class="options-section">
+        <label class="options-label" id="options-grid-label" data-i18n="gridSize">Grid boyutu</label>
+        <div class="options-choices">
+          <button type="button" class="options-choice" data-grid="small">Küçük</button>
+          <button type="button" class="options-choice active" data-grid="medium">Orta</button>
+          <button type="button" class="options-choice" data-grid="large">Büyük</button>
+        </div>
+      </div>
+      <div class="options-section">
+        <label class="options-label" id="options-sort-label" data-i18n="sort">Sıralama</label>
+        <div class="options-choices">
+          <button type="button" class="options-choice" data-sort="az">A → Z</button>
+          <button type="button" class="options-choice" data-sort="za">Z → A</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1691.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
